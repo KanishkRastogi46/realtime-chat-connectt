@@ -12,6 +12,7 @@ config();
 
 import connectDB from "./src/lib/db";
 import userRouter from "./src/routes/users.route"
+import chatRouter from "./src/routes/chats.route";
 
 // initializing express app and socket.io server
 const app: Express = express();
@@ -44,6 +45,7 @@ app.use(session({
 
 // api routes
 app.use("/api/v1/auth", userRouter);
+app.use("/api/v1/chats", chatRouter);
 
 
 app.get("/", (req: Request, res: Response) => {

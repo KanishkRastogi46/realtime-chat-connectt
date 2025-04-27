@@ -17,6 +17,15 @@ declare global {
     } 
 }
 
+
+/* 
+validating the request to check whether the user is authenticated or not
+by checking whether the token is present in the request or not
+if the token is present then verify the token and get the user data from the token
+and then check whether the user exists in the database or not
+if the user exists then set the user data in the request and call the next middleware
+if the user doesn't exist then return the response with message "User not found"
+*/
 export default async function protectedRoute(req: Request, res: Response, next: NextFunction) : Promise<any> {
     try {
         let token = req.cookies.accesstoken || req.headers.authorization?.split(" ")[1];

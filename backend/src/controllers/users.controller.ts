@@ -1,22 +1,30 @@
 import expressAsyncHandler from "express-async-handler";
 import { Request , Response , NextFunction } from "express";
 import usersModel from "../models/users.model";
-import { validationResult } from "express-validator";
 import { hash , compare } from "bcryptjs";
 import { sign , verify } from "jsonwebtoken";
-import {ApiResponse, ApiErrorResponse} from "../utils/apiResponse"
+import {ApiResponse, ApiErrorResponse} from "../utils/apiResponse";
+import { userRegisterSchema, userLoginSchema } from "../utils/schema";
 
 
 export const register = expressAsyncHandler(async (req: Request, res: Response, next: NextFunction) : Promise<any>=>{
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        let msg: string[] = []
-        for (let obj of errors.array()) msg.push(obj.msg)
-        return res.json(new ApiResponse(undefined, msg.join(", "), false, 400));
-    }
+    
     console.log(req.body);
     const {username, email, password} = req.body;
 
+    // Validation check for user registration
+    const checkData = userRegisterSchema.safeParse({username, email, password});
+    if (!checkData.success) {
+        const errors = checkData.error.errors.map((error) => error.message);
+        return res.json(new ApiResponse(undefined, errors.join(", "), false, 400));
+    }
+
+    /*
+    first check whether the user already exists or not
+    if the user exists then return the response with message "User already exists"
+    if the user doesn't exist then create the user and return the response with message "User created successfully"
+    and also create a refresh token and send it in the cookie
+    */
     try {
         const findUser = await usersModel.findOne({email});
         if (findUser) return res.json(new ApiResponse(undefined, "User already exists", false, 202));
@@ -44,15 +52,24 @@ export const register = expressAsyncHandler(async (req: Request, res: Response, 
 
 
 export const login = expressAsyncHandler(async (req: Request, res: Response, next: NextFunction) : Promise<any>=> {
-    let errors = validationResult(req);
-    // console.log(errors.array())
-    if (!errors.isEmpty()) {
-        let msg: string[] = []
-        for (let obj of errors.array()) msg.push(obj.msg)
-        return res.json(new ApiResponse(undefined, msg.join(", "), false, 400));
-    }
+    
 
     const {email , password} = req.body;
+
+    // Validation check for user login
+    const checkData = userLoginSchema.safeParse({email, password});
+    if (!checkData.success) {
+        const errors = checkData.error.errors.map((error) => error.message);
+        return res.json(new ApiResponse(undefined, errors.join(", "), false, 400));
+    }
+
+    /*
+    first check whether the user exists or not
+    then match the password with the hashed password in the database
+    if the password matches then check if the user has a refresh token or not
+    if the user has a refresh token then create a new access token and send it in the cookie
+    if the user doesn't have a refresh token then create a new refresh token & access token and send it in the cookie
+    */
     try {
         let findUser = await usersModel.findOne({email});
         if (!findUser) return res.json(new ApiResponse(undefined, "User not found", false, 404));
@@ -98,12 +115,12 @@ export const login = expressAsyncHandler(async (req: Request, res: Response, nex
 
 
 export const profile = expressAsyncHandler(async (req: Request, res: Response, next: NextFunction) : Promise<any> => {
-    if (!req.body.user) return res.json(new ApiResponse(undefined, "Unauthorized user", false, 401));
-    else return res.status(201).json(new ApiResponse(req.body.user, "User profile", true, 200));
+    if (!req.user) return res.json(new ApiResponse(undefined, "Unauthorized user", false, 401));
+    else return res.status(201).json(new ApiResponse(req.user, "User profile", true, 200));
 })
 
 
 export const logout = expressAsyncHandler(async (req: Request, res: Response, next: NextFunction) : Promise<any> => {
-    if (!req.body.user) return res.json(new ApiResponse(undefined, "Unauthorized user", false, 401));
+    if (!req.user) return res.json(new ApiResponse(undefined, "Unauthorized user", false, 401));
     else return res.clearCookie("accesstoken").json(new ApiResponse(undefined, "User logged out", true, 200));
 })
