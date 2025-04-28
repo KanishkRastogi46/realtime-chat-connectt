@@ -22,6 +22,8 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router";
 import apiInstance from "../api/axios.config";
+import userStore from "../store/users.store";
+import { red } from "@mui/material/colors";
 
 // Define the state types
 interface SigninFormState {
@@ -32,6 +34,8 @@ interface SigninFormState {
 const Signin: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const setUser = userStore((state) => state.setUser);
   
   // State with type
   const [formState, setFormState] = useState<SigninFormState>({
@@ -60,7 +64,8 @@ const Signin: React.FC = () => {
     try {
       let response = await apiInstance.post("/auth/login", formState);
       if (response.data.success) {
-        navigate("/chat")
+        setUser(response.data.data.username, response.data.data.email, "Online");
+        navigate("/chat");
       }
     } catch (error) {
       console.log("Error during form submission: ", error);

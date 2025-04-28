@@ -19,19 +19,21 @@ const app: Express = express();
 const server = createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*",
-        methods: ["GET", "POST"],
+        origin: "http://localhost:5173",
         credentials: true,
     },
 });
 const port: number = Number(process.env.PORT)
+
+// using map data structure for in-memory storage for online users
+var onlineUsers: Map<string, string> = new Map<string, string>();
 
 // built-in middlewares
 app.use(logger("dev"));
 app.use(cors({
     origin: "http://localhost:5173",
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Accept", "Authorization"],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 }))
 app.use(express.json())
@@ -43,9 +45,17 @@ app.use(session({
     secret: String(process.env.SECRET),
 }))
 
+// Socket.IO Server
 io.on("connection", (socket) => {
+    // console.log(socket.handshake);
+    let username = socket.handshake.query.username as string;
+    if (username) onlineUsers.set(username, socket.id);
     console.log(`New client connected: ${socket.id}`);
+
+    io.emit("onlineUsers", Array.from(onlineUsers.keys()));
     socket.on("disconnect", () => {
+        onlineUsers.delete(username);
+        io.emit("onlineUsers", Array.from(onlineUsers.keys()));
         console.log(`Client disconnected: ${socket.id}`);
     });
 })

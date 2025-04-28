@@ -4,9 +4,9 @@ import protectedRoute from "../middlewares/userAuth.middleware";
 const router = Router();
 
 
-router.get("", protectedRoute, (req, res) => {
-    res.json({ message: "Get all chats" });
-});
+router.post("/get-users", protectedRoute,);
+
+router.get("/get-messages/:chatId", protectedRoute,);
 
 
 export default router;
