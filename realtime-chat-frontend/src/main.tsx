@@ -9,6 +9,7 @@ import '@fontsource/roboto/700.css';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import Signup from './pages/Signup.tsx';
 import Signin from './pages/Signin.tsx';
+import ChattingPage from './pages/ChattingPage.tsx';
 
 
 createRoot(document.getElementById('root')!).render(
@@ -17,6 +18,7 @@ createRoot(document.getElementById('root')!).render(
       <Route path="/" element={<App />} />
       <Route path='/signup' element={<Signup />} />
       <Route path='/signin' element={<Signin />} />
+      <Route path='/chat' element={<ChattingPage />} />
     </Routes>
   </BrowserRouter>
 )

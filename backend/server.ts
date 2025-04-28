@@ -29,7 +29,7 @@ const port: number = Number(process.env.PORT)
 // built-in middlewares
 app.use(logger("dev"));
 app.use(cors({
-    origin: ["*"],
+    origin: "http://localhost:5173",
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -43,6 +43,13 @@ app.use(session({
     secret: String(process.env.SECRET),
 }))
 
+io.on("connection", (socket) => {
+    console.log(`New client connected: ${socket.id}`);
+    socket.on("disconnect", () => {
+        console.log(`Client disconnected: ${socket.id}`);
+    });
+})
+
 // api routes
 app.use("/api/v1/auth", userRouter);
 app.use("/api/v1/chats", chatRouter);
@@ -55,7 +62,7 @@ app.get("/", (req: Request, res: Response) => {
 // starting the server
 const startApp =  async function () {
     await connectDB();
-    app.listen(port, () => {
+    server.listen(port, () => {
         console.log(`Server is running on port ${port}`);
     });
 }

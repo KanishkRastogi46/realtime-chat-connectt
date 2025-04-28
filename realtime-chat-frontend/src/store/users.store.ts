@@ -1,4 +1,4 @@
-import {createStore} from "zustand";
+import {create} from "zustand";
 
 interface User {
     username: string,
@@ -11,7 +11,7 @@ interface UserStore {
     setUser: (username: string, email: string, status: string)=>void
 }
 
-const userStore = createStore<UserStore>()((set)=>{
+const userStore = create<UserStore>()((set)=>{
     return {
         user: {
             username: "",

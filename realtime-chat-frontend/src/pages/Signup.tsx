@@ -21,6 +21,8 @@ import {
   Email,
   Lock,
 } from "@mui/icons-material";
+import { useNavigate } from "react-router";
+import apiInstance from "../api/axios.config";
 
 // Define the state types
 interface SignupFormState {
@@ -45,6 +47,8 @@ const Signup: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const navigate = useNavigate();
+
   // Handler for input changes
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -57,9 +61,16 @@ const Signup: React.FC = () => {
   };
 
   // Form submission handler
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    console.log("Form Data: ", formState);
+    try {
+      let response = await apiInstance.post("/auth/register", formState);
+      if (response.data.success) {
+        navigate("/signin")
+      }
+    } catch (error) {
+      console.log("Error during form submission: ", error);
+    }
     // TODO: Add API call for signup
   };
 
