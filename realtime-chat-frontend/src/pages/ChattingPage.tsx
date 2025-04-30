@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router';
-import userStore from '../store/users.store';
+import userStore, {User} from '../store/users.store';
 import { io } from 'socket.io-client';
 import apiInstance from '../api/axios.config';
 import {
@@ -11,12 +11,10 @@ import {
   Avatar,
   Badge,
   Paper,
-  // Divider,
   List,
   ListItem,
   ListItemAvatar,
   ListItemText,
-  // Container,
   AppBar,
   Toolbar,
   InputAdornment,
@@ -45,10 +43,7 @@ interface MessageInterface {
   updatedAt: Date;
 }
 
-interface ChatUser {
-  _id: string;
-  username: string;
-  email: string;
+interface ChatUser extends User {
   lastMessage?: string;
   lastMessageTime?: Date;
 }
@@ -92,18 +87,35 @@ export default function ChattingPage() {
   const user = userStore((state) => state.user);
   const onlineUsers = userStore((state) => state.onlineUsers);
   const inboxChatUsers = userStore((state) => state.inboxChatUsers);
+  const setUser = userStore((state) => state.setUser);
   const setOnlineUsers = userStore((state) => state.setOnlineUsers);
   const setInboxChatUsers = userStore((state) => state.setInboxChatUsers);
 
-  // Client side Socket.IO connection
-  const socket = useMemo(() => {
-    if (!user.username) return null;
-
-    return io("http://localhost:3000", {
-      query: {username: user.username}
-    })}, [user]);
-
   const navigate = useNavigate(); 
+
+  useEffect(() => {
+    if (!user._id) {
+      apiInstance
+        .get("/auth/profile")
+        .then(response => {
+          if (response.data.success === true) {
+            const { _id, username, email, status } = response.data.data;
+            setUser(_id, username, email, status);
+          } else {
+            console.log("Error fetching user data", response.data);
+            navigate("/signin");
+          }
+        })
+        .catch(error => {
+          console.log("Error fetching user data", error);
+          navigate("/signin");
+        });
+    }
+  }, [user])
+
+  // Client side Socket.IO connection
+  const socket = useMemo(() => io("http://localhost:3000", {auth: {username: user.username}}), [user]);
+
 
   const [messages, setMessages] = useState<MessageInterface[]>([]); // state to store messages
   const [currentMessage, setCurrentMessage] = useState(''); // Current message input
@@ -114,19 +126,19 @@ export default function ChattingPage() {
 
   // Effect for socket connection
   useEffect(() => {
-    socket?.on("connect", () => {
+    socket.on("connect", () => {
       console.log("Connected to server", socket.id);
     });
 
-    socket?.on("onlineUsers", (users) => {
+    socket.on("onlineUsers", (users) => {
       setOnlineUsers(users);
       console.log("Online users:", users);
     });
 
-    socket?.on("receiveMessage", (message) => {
+    socket.on("receiveMessage", (message) => {
       // Add logic to handle incoming messages
-      if ((selectedUser && (message.sender === selectedUser._id || message.receiver === selectedUser._id)) || 
-          message.sender === user._id || message.receiver === user._id) {
+      console.log("Received message:", message);
+      if ((selectedUser && message.sender === selectedUser._id)) {
         setMessages((prevMessages) => [...prevMessages, message]);
       }
     });
@@ -136,18 +148,13 @@ export default function ChattingPage() {
         console.log("Disconnected from server", socket.id);
       }) || console.log("Socket not connected");
     };
-  }, [socket, selectedUser]);
+  }, [user]);
 
   // Effect for initial data loading
   useEffect(() => {
-    // Check if user is logged in
-    if (!user.username) {
-      navigate("/signin");
-      return;
-    }
-
     // Load chat users
-    apiInstance
+    if (user.username) {
+      apiInstance
       .post("/chats/load-users", {
         user: { _id: user._id, username: user.username },
         chatUsers: inboxChatUsers
@@ -162,7 +169,8 @@ export default function ChattingPage() {
       .catch(error => {
         console.log(error);
       });
-  }, []);
+    }
+  }, [user]);
 
   // Effect to scroll to bottom when new messages arrive
   useEffect(() => {
@@ -178,18 +186,18 @@ export default function ChattingPage() {
 
     // Call the provided function to send the message
     if (selectedUser) {
-      handleSendMessageFunction(messageToSend, selectedUser._id);
+      handleSendMessageFunction(messageToSend, selectedUser);
     }
   };
 
   // Wrapper for the provided handleSendMessage function
-  const handleSendMessageFunction = (message: string, receiverId: any) => {
-    socket?.emit("sendMessage", message, user, receiverId);
+  const handleSendMessageFunction = (message: string, receiver: any) => {
+    socket?.emit("sendMessage", message, user, receiver);
 
     apiInstance
-      .post("/chats/current-message", {
+      .post("/chats/get-current-message", {
         sender: user._id, 
-        receiver: receiverId._id, 
+        receiver: receiver._id, 
         text: message
       })
       .then(response => {
@@ -205,7 +213,7 @@ export default function ChattingPage() {
   };
 
   // Load messages when selecting a user
-  const handleSelectUser = (chatUser: ChatUser) => {
+  const handleSelectUser = (chatUser: User) => {
     setSelectedUser(chatUser);
     setIsLoading(true);
     
@@ -221,7 +229,7 @@ export default function ChattingPage() {
   // Function to load messages
   const getMessages = (senderId: string, receiverId: string) => {
     apiInstance
-      .post("/chats/load-messages", { sender: senderId, receiver: receiverId })
+      .post("/chats/get-messages", { sender: senderId, receiver: receiverId })
       .then(response => {
         if (response.data.success === true) {
           setMessages(response.data.data);
@@ -236,19 +244,20 @@ export default function ChattingPage() {
       });
   };
 
+
   // Format time function
   const formatTime = (date: Date | string) => {
     const messageDate = new Date(date);
-    return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return messageDate.toLocaleTimeString();
   };
 
   // Check if user is online
-  const isUserOnline = (username: string) => {
-    return onlineUsers.includes(username);
+  const isUserOnline = (user: ChatUser) => {
+    return onlineUsers.includes(user.username);
   };
 
   // Filter users based on search
-  const filteredUsers = inboxChatUsers.filter(chatUser => 
+  const filteredUsers = inboxChatUsers.filter((chatUser: ChatUser) => 
     chatUser.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (chatUser.username && chatUser.username.toLowerCase().includes(searchQuery.toLowerCase()))
   );
@@ -290,10 +299,10 @@ export default function ChattingPage() {
       
       <List sx={{ overflow: 'auto', flexGrow: 1 }}>
         {filteredUsers.length > 0 ? (
-          filteredUsers.map((chatUser) => (
+          filteredUsers.map((chatUser: ChatUser) => (
             <ListItem
               key={chatUser._id}
-              selected={selectedUser?._id === chatUser._id}
+              // selected={selectedUser?._id === chatUser._id}
               onClick={() => handleSelectUser(chatUser)}
               sx={{
                 borderBottom: '1px solid',
@@ -304,7 +313,7 @@ export default function ChattingPage() {
               }}
             >
               <ListItemAvatar>
-                {isUserOnline(chatUser.username) ? (
+                {isUserOnline(chatUser) ? (
                   <OnlineBadge
                     overlap="circular"
                     anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
@@ -417,7 +426,7 @@ export default function ChattingPage() {
               </IconButton>
             )}
             
-            {isUserOnline(selectedUser.username) ? (
+            {isUserOnline(selectedUser) ? (
               <OnlineBadge
                 overlap="circular"
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
@@ -440,7 +449,7 @@ export default function ChattingPage() {
                 {selectedUser.username}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {isUserOnline(selectedUser.username) ? 'Online' : 'Offline'}
+                {isUserOnline(selectedUser) ? 'Online' : 'Offline'}
               </Typography>
             </Box>
             
@@ -555,6 +564,23 @@ export default function ChattingPage() {
               size="medium"
               sx={{ mr: 1 }}
             />
+            {/* <input 
+              type="text" 
+              name="currentMessage" 
+              id="currentMessage" 
+              onChange={(e) => setCurrentMessage(e.target.value)}
+              value={currentMessage}
+              style={{
+                flexGrow: 1,
+                padding: '10px',
+                borderRadius: '4px',
+                border: '1px solid #ccc',
+                outline: 'none',
+                fontSize: '16px',
+                marginRight: '8px',
+                width: '80%'
+              }}
+            /> */}
             <Tooltip title="Send message">
               <IconButton 
                 color="primary" 

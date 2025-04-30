@@ -258,7 +258,7 @@ const App: React.FC = () => {
                         color="primary" 
                         size="large"
                         component={RouterLink}
-                        to="/signup"
+                        to="/chat"
                         sx={{ 
                           py: 1.5, 
                           px: 4, 
@@ -267,7 +267,7 @@ const App: React.FC = () => {
                           textTransform: 'none' 
                         }}
                       >
-                        Get Started Free
+                        Get Started
                       </Button>
                       <Button 
                         variant="outlined" 

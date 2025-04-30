@@ -1,6 +1,6 @@
 import {create} from "zustand";
 
-interface User {
+export interface User {
     _id: string,
     username: string,
     email: string,
@@ -11,9 +11,9 @@ interface User {
 
 interface UserStore {
     user: User,
-    onlineUsers: User[],
+    onlineUsers: string[],
     inboxChatUsers: User[],
-    setOnlineUsers: (onlineUsers: User[])=>void,
+    setOnlineUsers: (onlineUsers: string[])=>void,
     setInboxChatUsers: (inbox: User[])=>void,
     setUser: (_id: string, username: string, email: string, status: string)=>void
 }
@@ -28,7 +28,7 @@ const userStore = create<UserStore>()((set)=>{
         },
         onlineUsers: [],
         inboxChatUsers: [],
-        setOnlineUsers: (onlineUsers: User[]) => set({onlineUsers: onlineUsers}),
+        setOnlineUsers: (onlineUsers: string[]) => set({onlineUsers: onlineUsers}),
         setInboxChatUsers: (inbox: User[]) => set({inboxChatUsers: inbox}),
         setUser: (_id: string, username: string, email: string, status: string = "Offline") => set({
             user: {
