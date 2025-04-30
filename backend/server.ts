@@ -17,6 +17,7 @@ import chatRouter from "./src/routes/chats.route";  // chatting routes
 // user and message models
 import userModel from "./src/models/users.model";
 import messageModel from "./src/models/messages.model";
+import { updateV1State } from "uuid/dist/cjs/v1";
 
 // initializing express app and socket.io server
 const app: Express = express();
@@ -54,7 +55,7 @@ io.on("connection", (socket) => {
 
     // during initial connection, we get the username from the client and add it to the onlineUsers map
     // we also emit the onlineUsers array to all clients
-    let username = socket.handshake.query.username as string;
+    let username = socket.handshake.auth.username as string;
     if (username) onlineUsers.set(username, socket.id);
     console.log(`New client connected: ${socket.id}`);
     console.log(onlineUsers)
@@ -73,6 +74,7 @@ io.on("connection", (socket) => {
     // we then create a new message in the database and emit the message to the receiver
     // we also log the message
     socket.on("sendMessage", async (msg, sender, receiver) => {
+        console.log(`Message from ${sender.username} to ${receiver.username}: ${msg}`);
         let getSender = await userModel.findOne({username: sender.username});
         let getReceiver = await userModel.findOne({username: receiver.username});
         await messageModel.create({
@@ -80,8 +82,8 @@ io.on("connection", (socket) => {
             sender: getSender?._id,
             receiver: getReceiver?._id,
         })
-        console.log(`Message from ${sender.username} to ${receiver.username}: ${msg}`);
-        socket.to(onlineUsers.get(receiver.username) as string).emit("receiveMessage", msg);
+        
+        socket.to(onlineUsers.get(receiver.username) as string).emit("receiveMessage", {text: msg, sender: getSender._id, receiver: getReceiver._id, createdAt: new Date(), updatedAt: new Date()});
     })
 
 });

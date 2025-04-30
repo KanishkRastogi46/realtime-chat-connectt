@@ -33,7 +33,7 @@ export default async function protectedRoute(req: Request, res: Response, next: 
         if (!token) return res.json(new ApiResponse(undefined, "Token not provided", false, 400));
         
         let user : any = verify(token , String(process.env.JWT_SECRET));
-        let getUser = await usersModel.findById({_id: user._id}).select("_id email fullname");
+        let getUser = await usersModel.findById({_id: user._id}).select("_id email username status createdAt updatedAt");
         if (!getUser) return res.json(new ApiResponse(undefined, "User not found", false, 404));
         req.user = getUser;
         next();

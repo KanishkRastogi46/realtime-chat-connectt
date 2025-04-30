@@ -53,9 +53,16 @@ export const loadChatUsers = expressAsyncHandler(async (req: Request, res: Respo
                     return user.sender.username === username ? user.receiver : user.sender;
                 });
 
-                const uniqueChatUsers = [...new Set(chatUsers.map((user: any) => user))];
-
-                return res.json(new ApiResponse(uniqueChatUsers, "Chat users loaded successfully", true, 200));
+                const uniqueChatUsers = new Set(chatUsers.map((user: any) => user.username));
+                let usersArr = [];
+                for (let username of uniqueChatUsers) {
+                    let user = await userModel.findOne({username}, {password: 0});
+                    if (user) {
+                        usersArr.push(user);
+                    }
+                }
+                // console.log(usersArr)
+                return res.json(new ApiResponse(usersArr, "Chat users loaded successfully", true, 200));
             }
         } 
         // if the client already has the list of users with whom the logged in user is chatting with
