@@ -90,3 +90,5 @@ npm install
 cd ../realtime-chat-frontend
 npm install
 ```
+
+![Alt Data-modelling](https://github.com/KanishkRastogi46/realtime-chat-connectt/blob/main/backend/public/db-modelling.png)
