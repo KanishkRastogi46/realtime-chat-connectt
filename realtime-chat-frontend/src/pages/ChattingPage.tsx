@@ -49,7 +49,6 @@ interface ChatUser {
   _id: string;
   username: string;
   email: string;
-  fullname: string;
   lastMessage?: string;
   lastMessageTime?: Date;
 }
@@ -97,7 +96,12 @@ export default function ChattingPage() {
   const setInboxChatUsers = userStore((state) => state.setInboxChatUsers);
 
   // Client side Socket.IO connection
-  const socket = useMemo(() => io("http://localhost:3000", {query: {username: user.username}}), []);
+  const socket = useMemo(() => {
+    if (!user.username) return null;
+
+    return io("http://localhost:3000", {
+      query: {username: user.username}
+    })}, [user]);
 
   const navigate = useNavigate(); 
 
@@ -110,16 +114,16 @@ export default function ChattingPage() {
 
   // Effect for socket connection
   useEffect(() => {
-    socket.on("connect", () => {
+    socket?.on("connect", () => {
       console.log("Connected to server", socket.id);
     });
 
-    socket.on("onlineUsers", (users) => {
+    socket?.on("onlineUsers", (users) => {
       setOnlineUsers(users);
       console.log("Online users:", users);
     });
 
-    socket.on("receiveMessage", (message) => {
+    socket?.on("receiveMessage", (message) => {
       // Add logic to handle incoming messages
       if ((selectedUser && (message.sender === selectedUser._id || message.receiver === selectedUser._id)) || 
           message.sender === user._id || message.receiver === user._id) {
@@ -128,9 +132,9 @@ export default function ChattingPage() {
     });
 
     return () => {
-      socket.on("disconnect", () => {
+      socket?.on("disconnect", () => {
         console.log("Disconnected from server", socket.id);
-      });
+      }) || console.log("Socket not connected");
     };
   }, [socket, selectedUser]);
 
@@ -179,13 +183,13 @@ export default function ChattingPage() {
   };
 
   // Wrapper for the provided handleSendMessage function
-  const handleSendMessageFunction = (message: string, receiverId: string) => {
-    socket.emit("sendMessage", message, user._id, receiverId);
+  const handleSendMessageFunction = (message: string, receiverId: any) => {
+    socket?.emit("sendMessage", message, user, receiverId);
 
     apiInstance
       .post("/chats/current-message", {
         sender: user._id, 
-        receiver: receiverId, 
+        receiver: receiverId._id, 
         text: message
       })
       .then(response => {
@@ -288,8 +292,6 @@ export default function ChattingPage() {
         {filteredUsers.length > 0 ? (
           filteredUsers.map((chatUser) => (
             <ListItem
-              button
-              component={'button'}
               key={chatUser._id}
               selected={selectedUser?._id === chatUser._id}
               onClick={() => handleSelectUser(chatUser)}
@@ -423,19 +425,19 @@ export default function ChattingPage() {
               >
                 <Avatar 
                   alt={selectedUser.username} 
-                  src={`https://ui-avatars.com/api/?name=${selectedUser.fullname || selectedUser.username}&background=random`} 
+                  src={`https://ui-avatars.com/api/?name=${selectedUser.username}&background=random`} 
                 />
               </OnlineBadge>
             ) : (
               <Avatar 
                 alt={selectedUser.username} 
-                src={`https://ui-avatars.com/api/?name=${selectedUser.fullname || selectedUser.username}&background=random`} 
+                src={`https://ui-avatars.com/api/?name=${selectedUser.username}&background=random`} 
               />
             )}
             
             <Box sx={{ ml: 2, flexGrow: 1 }}>
               <Typography variant="subtitle1" fontWeight="medium">
-                {selectedUser.fullname || selectedUser.username}
+                {selectedUser.username}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {isUserOnline(selectedUser.username) ? 'Online' : 'Offline'}
@@ -479,7 +481,7 @@ export default function ChattingPage() {
                   {!isCurrentUser && (
                     <Avatar
                       alt={selectedUser.username}
-                      src={`https://ui-avatars.com/api/?name=${selectedUser.fullname || selectedUser.username}&background=random`}
+                      src={`https://ui-avatars.com/api/?name=${selectedUser.username}&background=random`}
                       sx={{ width: 32, height: 32, mr: 1, alignSelf: 'flex-end' }}
                     />
                   )}

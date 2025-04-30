@@ -51,26 +51,37 @@ app.use(session({
 
 // Socket.IO Server
 io.on("connection", (socket) => {
-    
+
+    // during initial connection, we get the username from the client and add it to the onlineUsers map
+    // we also emit the onlineUsers array to all clients
     let username = socket.handshake.query.username as string;
     if (username) onlineUsers.set(username, socket.id);
     console.log(`New client connected: ${socket.id}`);
     console.log(onlineUsers)
     io.emit("onlineUsers", Array.from(onlineUsers.keys()));
+
+    // when a client disconnects, we remove it from the onlineUsers map and emit the onlineUsers array to all clients
+    // we also log the disconnection
     socket.on("disconnect", () => {
         onlineUsers.delete(username);
         io.emit("onlineUsers", Array.from(onlineUsers.keys()));
         console.log(`Client disconnected: ${socket.id}`);
     });
 
+    // this event is triggered when a client sends a message to another client
+    // we get the sender and receiver usernames from the client and find their ids in the database
+    // we then create a new message in the database and emit the message to the receiver
+    // we also log the message
     socket.on("sendMessage", async (msg, sender, receiver) => {
-        let getSender = await userModel.findOne({username: sender});
-        let getReceiver = await userModel.findOne({username: receiver});
+        let getSender = await userModel.findOne({username: sender.username});
+        let getReceiver = await userModel.findOne({username: receiver.username});
         await messageModel.create({
             text: msg,
             sender: getSender?._id,
             receiver: getReceiver?._id,
         })
+        console.log(`Message from ${sender.username} to ${receiver.username}: ${msg}`);
+        socket.to(onlineUsers.get(receiver.username) as string).emit("receiveMessage", msg);
     })
 
 });
