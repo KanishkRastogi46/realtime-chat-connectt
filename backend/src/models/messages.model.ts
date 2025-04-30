@@ -1,31 +1,26 @@
 import mongoose, { Document, Schema } from "mongoose";
 import { User } from "./users.model";
-import { Chat } from "./chats.model";
 
 export interface Message extends Document {
-    message: string,
+    text: string,
+    file: string,
     sender: User,
-    receivers: User[],
-    chat: Chat,
+    receiver: User
 }
 
 const messageSchema: Schema<Message> = new Schema<Message>({
-    message: { type: String, required: true },
+    text: String,
+    file: String,
     sender: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "users",
         required: true
     },
-    receivers: [{
+    receiver: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "users",
         required: true
-    }],
-    chat: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "chats",
-        required: true
-    }
+    },
 }, {
     timestamps: true,
 })

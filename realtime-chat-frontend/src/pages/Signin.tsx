@@ -64,7 +64,7 @@ const Signin: React.FC = () => {
     try {
       let response = await apiInstance.post("/auth/login", formState);
       if (response.data.success) {
-        setUser(response.data.data.username, response.data.data.email, "Online");
+        setUser(response.data.data._id, response.data.data.username, response.data.data.email, "Online");
         navigate("/chat");
       }
     } catch (error) {

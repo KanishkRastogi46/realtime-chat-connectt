@@ -10,14 +10,18 @@ import {config} from "dotenv";
 // loading environment variables from .env
 config();
 
-import connectDB from "./src/lib/db";
-import userRouter from "./src/routes/users.route"
-import chatRouter from "./src/routes/chats.route";
+import connectDB from "./src/lib/db";               // function to connect to the database
+import userRouter from "./src/routes/users.route"   // user routes
+import chatRouter from "./src/routes/chats.route";  // chatting routes
+
+// user and message models
+import userModel from "./src/models/users.model";
+import messageModel from "./src/models/messages.model";
 
 // initializing express app and socket.io server
 const app: Express = express();
-const server = createServer(app);
-const io = new Server(server, {
+const server = createServer(app);                   // creating http server and wrapping express app in it
+const io = new Server(server, {                     // creating socket.io server and wrapping http server in it
     cors: {
         origin: "http://localhost:5173",
         credentials: true,
@@ -47,18 +51,29 @@ app.use(session({
 
 // Socket.IO Server
 io.on("connection", (socket) => {
-    // console.log(socket.handshake);
+    
     let username = socket.handshake.query.username as string;
     if (username) onlineUsers.set(username, socket.id);
     console.log(`New client connected: ${socket.id}`);
-
+    console.log(onlineUsers)
     io.emit("onlineUsers", Array.from(onlineUsers.keys()));
     socket.on("disconnect", () => {
         onlineUsers.delete(username);
         io.emit("onlineUsers", Array.from(onlineUsers.keys()));
         console.log(`Client disconnected: ${socket.id}`);
     });
-})
+
+    socket.on("sendMessage", async (msg, sender, receiver) => {
+        let getSender = await userModel.findOne({username: sender});
+        let getReceiver = await userModel.findOne({username: receiver});
+        await messageModel.create({
+            text: msg,
+            sender: getSender?._id,
+            receiver: getReceiver?._id,
+        })
+    })
+
+});
 
 // api routes
 app.use("/api/v1/auth", userRouter);
@@ -69,11 +84,11 @@ app.get("/", (req: Request, res: Response) => {
     res.json({message: "Hello World!"});
 })
 
-// starting the server
+// starting the server and connecting to the database
 const startApp =  async function () {
-    await connectDB();
     server.listen(port, () => {
         console.log(`Server is running on port ${port}`);
     });
+    await connectDB();
 }
 startApp();
