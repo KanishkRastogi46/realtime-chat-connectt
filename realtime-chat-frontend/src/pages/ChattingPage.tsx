@@ -43,11 +43,6 @@ interface MessageInterface {
   updatedAt: Date;
 }
 
-interface ChatUser extends User {
-  lastMessage?: string;
-  lastMessageTime?: Date;
-}
-
 // Styled components for online status badge
 const OnlineBadge = styled(Badge)(({ theme }) => ({
   '& .MuiBadge-badge': {
@@ -87,9 +82,11 @@ export default function ChattingPage() {
   const user = userStore((state) => state.user);
   const onlineUsers = userStore((state) => state.onlineUsers);
   const inboxChatUsers = userStore((state) => state.inboxChatUsers);
+  const selectedUser = userStore((state) => state.selectedUser);
   const setUser = userStore((state) => state.setUser);
   const setOnlineUsers = userStore((state) => state.setOnlineUsers);
   const setInboxChatUsers = userStore((state) => state.setInboxChatUsers);
+  const setSelectedUser = userStore((state) => state.setSelectedUser);
 
   const navigate = useNavigate(); 
 
@@ -114,12 +111,11 @@ export default function ChattingPage() {
   }, [user])
 
   // Client side Socket.IO connection
-  const socket = useMemo(() => io("http://localhost:3000", {auth: {username: user.username}}), [user]);
+  const socket = useMemo(() => io("http://localhost:3000", {auth: {username: user.username}}), []);
 
 
   const [messages, setMessages] = useState<MessageInterface[]>([]); // state to store messages
   const [currentMessage, setCurrentMessage] = useState(''); // Current message input
-  const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null); // Selected user for chat
   const [searchQuery, setSearchQuery] = useState(''); // For user search
   const [isLoading, setIsLoading] = useState(false); // Loading state
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false); // For mobile drawer state
@@ -135,20 +131,31 @@ export default function ChattingPage() {
       console.log("Online users:", users);
     });
 
-    socket.on("receiveMessage", (message) => {
-      // Add logic to handle incoming messages
+    // socket.on("loadUser", (user) => {
+    //   console.log("User loaded:", user);
+    //   if (!inboxChatUsers.includes(user)) setInboxChatUsers([...inboxChatUsers, user]);
+    // })
+
+    function handleReceiveMessage(message: any) {
       console.log("Received message:", message);
-      if ((selectedUser && message.sender === selectedUser._id)) {
+      console.log("Selected user:", selectedUser);
+      if ((selectedUser && message.sender === selectedUser._id && message.receiver === user._id) ||
+          (selectedUser && message.sender === user._id && message.receiver === selectedUser._id)) {
         setMessages((prevMessages) => [...prevMessages, message]);
       }
-    });
+    }
+
+    socket.on("receiveMessage", handleReceiveMessage);
 
     return () => {
-      socket?.on("disconnect", () => {
-        console.log("Disconnected from server", socket.id);
-      }) || console.log("Socket not connected");
+      socket.off("connect");
+      socket.off("onlineUsers");
+      socket.off("receiveMessage");
+      socket.off("loadUser");
+      socket.disconnect();
+      console.log("Disconnected from server", socket.id);
     };
-  }, [user]);
+  }, []);
 
   // Effect for initial data loading
   useEffect(() => {
@@ -252,12 +259,12 @@ export default function ChattingPage() {
   };
 
   // Check if user is online
-  const isUserOnline = (user: ChatUser) => {
+  const isUserOnline = (user: User) => {
     return onlineUsers.includes(user.username);
   };
 
   // Filter users based on search
-  const filteredUsers = inboxChatUsers.filter((chatUser: ChatUser) => 
+  const filteredUsers = inboxChatUsers.filter((chatUser: User) => 
     chatUser.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (chatUser.username && chatUser.username.toLowerCase().includes(searchQuery.toLowerCase()))
   );
@@ -299,7 +306,7 @@ export default function ChattingPage() {
       
       <List sx={{ overflow: 'auto', flexGrow: 1 }}>
         {filteredUsers.length > 0 ? (
-          filteredUsers.map((chatUser: ChatUser) => (
+          filteredUsers.map((chatUser: User) => (
             <ListItem
               key={chatUser._id}
               // selected={selectedUser?._id === chatUser._id}
@@ -327,25 +334,8 @@ export default function ChattingPage() {
               </ListItemAvatar>
               <ListItemText
                 primary={chatUser.username}
-                secondary={
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {chatUser.lastMessage || 'No messages yet'}
-                  </Typography>
-                }
               />
-              {chatUser.lastMessageTime && (
-                <Typography variant="caption" color="text.secondary">
-                  {formatTime(chatUser.lastMessageTime)}
-                </Typography>
-              )}
+              
             </ListItem>
           ))
         ) : (
@@ -361,7 +351,7 @@ export default function ChattingPage() {
 
   // Chat area component
   const ChatArea = () => {
-    if (!selectedUser) {
+    if (!selectedUser || !user) {
       return (
         <Box
           sx={{

@@ -55,6 +55,7 @@ io.on("connection", (socket) => {
 
     // during initial connection, we get the username from the client and add it to the onlineUsers map
     // we also emit the onlineUsers array to all clients
+    console.log("Auth username: ", socket.handshake.auth.username);
     let username = socket.handshake.auth.username as string;
     if (username) onlineUsers.set(username, socket.id);
     console.log(`New client connected: ${socket.id}`);
@@ -75,14 +76,18 @@ io.on("connection", (socket) => {
     // we also log the message
     socket.on("sendMessage", async (msg, sender, receiver) => {
         console.log(`Message from ${sender.username} to ${receiver.username}: ${msg}`);
-        let getSender = await userModel.findOne({username: sender.username});
-        let getReceiver = await userModel.findOne({username: receiver.username});
+        let getSender = await userModel.findOne({username: sender.username}, {password: 0});
+        let getReceiver = await userModel.findOne({username: receiver.username}, {password: 0});
         await messageModel.create({
             text: msg,
             sender: getSender?._id,
             receiver: getReceiver?._id,
         })
-        
+
+        // this event is emitted to the receiver only when the sender is not on their inbox
+        socket.to(onlineUsers.get(receiver.username) as string).emit("loadUser", getSender)
+
+        // this eventv is emitted to the receiver only to get the messsage send by the sender
         socket.to(onlineUsers.get(receiver.username) as string).emit("receiveMessage", {text: msg, sender: getSender._id, receiver: getReceiver._id, createdAt: new Date(), updatedAt: new Date()});
     })
 

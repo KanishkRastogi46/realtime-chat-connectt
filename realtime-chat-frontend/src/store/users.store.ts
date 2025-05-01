@@ -13,9 +13,11 @@ interface UserStore {
     user: User,
     onlineUsers: string[],
     inboxChatUsers: User[],
+    selectedUser: User,
     setOnlineUsers: (onlineUsers: string[])=>void,
     setInboxChatUsers: (inbox: User[])=>void,
-    setUser: (_id: string, username: string, email: string, status: string)=>void
+    setUser: (_id: string, username: string, email: string, status: string)=>void,
+    setSelectedUser: (user: User)=>void
 }
 
 const userStore = create<UserStore>()((set)=>{
@@ -28,6 +30,12 @@ const userStore = create<UserStore>()((set)=>{
         },
         onlineUsers: [],
         inboxChatUsers: [],
+        selectedUser: {
+            _id: "",
+            username: "",
+            email: "",
+            status: "Offline"
+        },
         setOnlineUsers: (onlineUsers: string[]) => set({onlineUsers: onlineUsers}),
         setInboxChatUsers: (inbox: User[]) => set({inboxChatUsers: inbox}),
         setUser: (_id: string, username: string, email: string, status: string = "Offline") => set({
@@ -37,7 +45,8 @@ const userStore = create<UserStore>()((set)=>{
                 email: email,
                 status: status
             }
-        })
+        }),
+        setSelectedUser: (user: User) => set({selectedUser: user}),
     }
 })
 
