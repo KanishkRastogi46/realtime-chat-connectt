@@ -38,12 +38,45 @@ Connectt is a feature-rich chat application that enables real-time communication
 
 ### Backend Structure
 
-
+```
+backend/
+├── src/
+│   ├── config/             # Configuration files
+│   ├── controllers/        # Request handlers
+│   ├── middleware/         # Express middleware
+│   ├── models/             # Mongoose models
+│   ├── routes/             # API routes
+│   ├── services/           # Business logic
+│   ├── socket/             # Socket.io implementation
+│   ├── types/              # TypeScript type definitions
+│   ├── utils/              # Utility functions
+│   └── app.ts              # Express app setup
+├── .env                    # Environment variables
+├── package.json            # Project dependencies
+└── tsconfig.json           # TypeScript configuration
+```
 
 ### Frontend Structure
 
-
-
+```
+realtime-chat-frontend/
+├── public/                 # Static files
+├── src/
+│   ├── assets/             # Images, fonts, etc.
+│   ├── components/         # Reusable UI components
+│   ├── contexts/           # React contexts
+│   ├── hooks/              # Custom React hooks
+│   ├── pages/              # Page components
+│   ├── services/           # API service functions
+│   ├── store/              # Zustand state management
+│   ├── types/              # TypeScript type definitions
+│   ├── utils/              # Utility functions
+│   ├── App.tsx             # Main application component
+│   └── index.tsx           # Application entry point
+├── .env                    # Environment variables
+├── package.json            # Project dependencies
+└── tsconfig.json           # TypeScript configuration
+```
 
 ## Technologies Used
 
@@ -90,5 +123,68 @@ npm install
 cd ../realtime-chat-frontend
 npm install
 ```
+
+### Running the Application
+
+1. Start the backend server by opening 2 terminals
+```bash
+npx tsc -w
+```
+```bash
+cd backend
+npm run dev
+```
+
+2. Start the frontend development server
+```bash
+cd ../realtime-chat-frontend
+npm run dev
+```
+
+3. Access the application in your browser at `http://localhost:3000`
+
+## Environment Variables
+
+### Backend (.env)
+```
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/connectt
+JWT_SECRET=your_jwt_secret_key
+JWT_EXPIRY=24h
+NODE_ENV=development
+CORS_ORIGIN=http://localhost:3000
+```
+
+### Frontend (.env)
+```
+REACT_APP_API_URL=http://localhost:5000
+REACT_APP_SOCKET_URL=http://localhost:5000
+```
+
+## API Documentation
+
+### Authentication
+- `POST /api/v1/auth/register` - Register a new user
+- `POST /api/v1/auth/login` - Login a user
+- `GET /api/v1/auth/profile` - Get current user profile
+- `GET /api/v1/auth/logout` - Logout the user
+
+
+### Chats and Messages
+- `POST /api/v1/chat/load-users` - Get messages for a chat
+- `POST /api/v1/chat/get-messages` - Send a new message
+- `POST /api/v1/chat/get-current-message` - Mark message as read
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ![Alt Data-modelling](https://github.com/KanishkRastogi46/realtime-chat-connectt/blob/main/backend/public/db-modelling.png)
